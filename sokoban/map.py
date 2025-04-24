@@ -7,7 +7,6 @@ from typing import Optional
 import yaml
 import os
 
-
 OBSTACLE_SYMBOL = 1
 BOX_SYMBOL = 2
 TARGET_SYMBOL = 3
