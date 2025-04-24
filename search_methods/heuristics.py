@@ -2,25 +2,34 @@ from scipy.optimize import linear_sum_assignment
 
 import numpy as np
 
-from sokoban.map import BOX_SYMBOL, OBSTACLE_SYMBOL, Map
+from sokoban.map import OBSTACLE_SYMBOL, Map
 from search_methods.utils import (
     compute_distance_matrix,
     compute_distance_reachable_pushes,
     compute_reachable_positions,
-    in_bounds,
 )
 
-__all__ = ["boxes_placed", "boxes_total_distance_old", "boxes_total_distance"]
+__all__ = [
+    "manhattan_min_distances",
+    "boxes_total_distance_old",
+    "boxes_total_distance",
+]
 
 
-def boxes_placed(state: Map) -> int:
-    cost = 0
+def manhattan_distance(a: tuple[int, int], b: tuple[int, int]) -> int:
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
-    for target in state.targets:
-        if target not in state.positions_of_boxes:
-            cost += 1
 
-    return cost
+def manhattan_min_distances(state: Map) -> int:
+    total_distances = 0
+
+    for box in state.boxes.values():
+        target_distances = map(
+            lambda t: manhattan_distance((box.x, box.y), t), state.targets
+        )
+        total_distances += min(target_distances)
+
+    return total_distances
 
 
 def boxes_total_distance_old(state: Map) -> int:
@@ -82,10 +91,11 @@ def boxes_total_distance(state: Map) -> int:
 
 def boxes_distance_and_reach_distance(state: Map) -> int:
     player_reach = compute_distance_matrix(
-        state, [(state.player.x, state.player.y)], [OBSTACLE_SYMBOL],
+        state,
+        [(state.player.x, state.player.y)],
+        [OBSTACLE_SYMBOL],
         restrict_pushes=False,
     )
-    
 
     # min_box_distance = min(map(lambda b: player_reach[b.x][b.y], state.boxes.values()))
     min_box_distance = 0
@@ -105,7 +115,7 @@ def distance_to_target_reachable(state: Map) -> int:
         reach[box.x][box.y] = False
         for t in distances[::-1]:
             print(t)
-        print('====')
+        print("====")
         for j, target in enumerate(state.targets):
             box_target_dist[i, j] = distances[target[0]][target[1]]
 

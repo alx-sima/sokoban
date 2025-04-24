@@ -1,6 +1,7 @@
 \documentclass{article}
 
 \usepackage[romanian]{babel}
+\usepackage{fancyhdr}
 \usepackage[a4paper]{geometry}
 \usepackage{graphicx}
 \usepackage[hidelinks]{hyperref}
@@ -21,6 +22,9 @@
     cele 2 strategii, cât și prezentarea raționamentului care a condus la 
     această soluții și comparații cu idei anterioare.
 \end{abstract}
+
+\pagestyle{fancy}
+\rhead{\textit{Sokoban - Tema 1 IA}}
 
 \newpage
 \tableofcontents
@@ -86,7 +90,7 @@ implementată deja în \textit{Python} în biblioteca \textit{scipy}
 (\textit{scipy.optimize.linear\_sum\_assignment}).
 
 
-\subsection{Analiza performanțelor}
+\subsection{Analiza performanțelor}\label{sec:performances}
 
 Parametri utilizați:
 \begin{itemize}
@@ -119,7 +123,7 @@ LRTA* este de $\approx 3$ ori mai rapid decât Beam Search pentru o bună parte
 din teste. 
 
 \begin{figure}
-    \includegraphics[scale=0.8]{plots/solution/time.png}
+    \includegraphics[scale=0.8]{solution/time.png}
     \caption{Timpul de execuție al algoritmilor pe diferite teste}
     \label{fig:time}
 \end{figure}
@@ -133,7 +137,7 @@ complexe și cu multe "stări capcană", după cum se poate observa în
 a evita \textit{deadlock}-urile.
 
 \begin{figure}
-    \includegraphics[scale=0.8]{plots/solution/states.png}
+    \includegraphics[scale=0.8]{solution/states.png}
     \caption{Numărul de stări vizitate de algoritmi în cazul fiecărui test}
     \label{fig:states}
 \end{figure}
@@ -149,21 +153,77 @@ algoritmul converge către costurile reale. Se poate vedea în
 anumite teste, nu este suficient, chiar dacă se repornește de 100 de ori!
 
 \begin{figure}
-    \includegraphics[scale=0.8]{plots/solution/solution_length.png}
+    \includegraphics[scale=0.8]{solution/solution_length.png}
     \caption{Lungimea soluției (numărul de mișcări) găsite de algoritmi pentru 
     teste}
     \label{fig:solution_length}
 \end{figure}
 
 \begin{figure}
-    \includegraphics[scale=0.45]{plots/solution/enhanced_astar/solution_length.png}
-    \includegraphics[scale=0.45]{plots/solution/enhanced_astar/time.png}
+    \includegraphics[scale=0.45]{solution/enhanced_astar/solution_length.png}
+    \includegraphics[scale=0.45]{solution/enhanced_astar/time.png}
     \caption{Lungimile soluțiilor și durata execuției pentru Beam Search și 
     LRTA* cu 100 de reporniri după găsirea soluției}
     \label{fig:enhanced_astar}
 \end{figure}
 
+\newpage
 \section{Raționament}
+
+\subsection{Distanța Manhattan}
+Prima idee de implementare a fost însumarea distanței Manhattan de la fiecare
+cutie la cea mai apropiată țintă. Această euristică se calculează foarte ușor și
+este \textit{consistentă}, dar nu este foarte eficientă, tendința jucătorului 
+fiind să împingă cutiile în direcția țintelor, ignorând existența pereților. 
+Pentru a compensa acest fapt, am mărit \textit{beamul} și am ales o abordare
+stocastică în alegerea stărilor care să constituie \textit{beam-ul}. Inițial am
+decis să se aleagă $k$ stări cu o probabilitate proporțională cu costul 
+fiecăreia (de exemplu, având 3 stări cu costurile 1, 2 și 3, acestea să fie 
+alese cu probabilitățile $\frac{3}{6}$, $\frac{2}{6}$, respectiv $\frac{1}{6}$).
+Această abordare nu a funcționat, deoarece stărilor cu costuri mari le erau 
+atribuite probabilități mult prea mari. Soluția a fost transformarea costurilor
+în probabilități cu ajutorul funcției \textit{softmax}, care oferă probabilități
+care scad exponențial cu cât costul este la o distanță mai mare de maximum.
+Funcția \textit{softmax} folosită (\ref{for:softmax}) a suferit mici modificări
+față de cea originală, deoarece am dorit să atribui probabilități mari stărilor 
+cu costuri mici, am normalizat valorile $x_i$ în apropierea lui 0 și nu am
+adăugat un parametru de temperatură (care controlează cât de brusc scad 
+probabilitățile odată cu distanța, comportându-se similar cu cea din algoritmul 
+\textit{Simulated Annealing}).
+
+\begin{figure}[ht]
+    \begin{center}
+        \includegraphics[scale=0.7]{manhattan.png}
+    \end{center}
+    \caption{Situație în care Beam Search se blochează într-o stare  de minim 
+    local, caz în care $k$ trebuie mărit}
+\end{figure}
+
+În parametri aleși la \textbf{\ref{sec:performances}}, algoritmii rezolvă în 
+medie $6/8$ teste.
+
+\begin{figure}[ht]
+    \[ P(x_i) = \frac{e^{x_i - \max(x_k)}}{\sum_{j=1}^n e^{x_j - \max(x_k)}} \]
+    \caption{Funcția softmax folosită}
+    \label{for:softmax}
+\end{figure}
+
+\subsection{Numărul minim de mutări}
+Următoarea idee a fost similară cu cea de mai sus, dar cu un calcul mai fidel al
+distanțelor (în loc de distanță Manhattan, pentru fiecare cutie se calculează 
+numărul de mișcări până la ținte, folosind algoritmul lui 
+Lee\footnote{\url{https://www.pbinfo.ro/articole/18589/algoritmul-lui-lee}}), 
+apoi se însumează distanțele pentru fiecare cutie. În plus, am adăugat un 
+termen care să țină cont de distanța jucătorului față de cutiiile care nu sunt 
+pe ținte, dar, pentru un $k$ mic și cu pondere egala cu cea a distanței 
+cutiilor, jucătorul putea ajunge "să se teamă" să împingă cutiile pe ținte, 
+deoarece în acest mod se "îndepărta" de cutie. Acest impediment a putut fi 
+reglat acordând o pondere mai mare distanței cutiilor.
+
+\subsection{Corespondența cutie - țintă de cost minim}
+
+\section{Concluzii}
+
 % \section{Beam search}
 
 % Am început prin a sorta starile in functie de distantele de la cutii la 
