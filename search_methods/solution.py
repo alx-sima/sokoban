@@ -1,3 +1,6 @@
+from shutil import rmtree
+from tempfile import mkdtemp
+from sokoban.gif import create_gif, save_images
 from sokoban.map import Map
 
 __all__ = ["Solution"]
@@ -44,6 +47,13 @@ class Solution:
             return False
 
         return Map.from_str(self.steps[-1]).is_solved()
+
+    def save(self, name: str, path: str = ".") -> None:
+        """Save the solution as a gif."""
+        tmpdir = mkdtemp()
+        save_images(self.steps, tmpdir)
+        create_gif(tmpdir, name, path)
+        rmtree(tmpdir)
 
     @staticmethod
     def average(solutions: list["Solution"]) -> "Solution":

@@ -6,7 +6,9 @@ doc: documentation/Sokoban.tex images/*
 pack: $(ARCHIVE).zip
 
 $(ARCHIVE).zip:
-	zip -FSr $(ARCHIVE).zip documentation/Sokoban.{tex,pdf} images/* search_methods/**/*.py sokoban/**/*.py solutions/*.gif tests/*.yaml main.ipynb requirements.txt
+	zip -FSr $(ARCHIVE).zip documentation/Sokoban.{tex,pdf} images/* \
+	search_methods/*.py sokoban/*.py solutions/**/*.gif tests/*.yaml \
+	main.ipynb requirements.txt
 
 clean:
 	make -C documentation clean

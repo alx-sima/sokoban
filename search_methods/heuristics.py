@@ -12,8 +12,9 @@ import numpy as np
 
 __all__ = [
     "manhattan_min_distances",
-    "boxes_total_distance_old",
     "boxes_minimum_moves_combination",
+    "player_and_boxes_minimum_moves_combination",
+    "distance_to_target_reachable",
 ]
 
 
@@ -72,38 +73,23 @@ def player_and_boxes_minimum_moves_combination(state: Map) -> int:
     return min(box_distances) + boxes_minimum_moves_combination(state)
 
 
-def boxes_distance_and_reach_distance(state: Map) -> int:
-    player_reach = compute_distance_matrix(
-        state,
-        [(state.player.x, state.player.y)],
-        [OBSTACLE_SYMBOL],
-        restrict_pushes=False,
-    )
-
-    # min_box_distance = min(map(lambda b: player_reach[b.x][b.y], state.boxes.values()))
-    min_box_distance = 0
-    # min_box_distance = max(map(lambda b: (state.player.x - b.x) + abs(state.player.y - b.y), state.boxes.values()))
-    return min_box_distance + boxes_minimum_moves_combination(state)
-
-
 def distance_to_target_reachable(state: Map) -> int:
+    """
+    Calculate the minimum number of pushes needed to move all boxes to a 
+    corresponding target. A push is valid only if the player can reach the cell 
+    opposite to the target.
+    """
     reach = compute_reachable_positions(state)
-    for i in reach[::-1]:
-        print(i)
     box_target_dist = np.zeros((len(state.boxes), len(state.targets)))
 
     for i, box in enumerate(state.boxes.values()):
         reach[box.x][box.y] = True
         distances = compute_distance_reachable_pushes(state, (box.x, box.y), reach)
         reach[box.x][box.y] = False
-        for t in distances[::-1]:
-            print(t)
-        print("====")
+
         for j, target in enumerate(state.targets):
             box_target_dist[i, j] = distances[target[0]][target[1]]
 
     rows, cols = optimize.linear_sum_assignment(box_target_dist)
     match = box_target_dist[rows, cols]
-    print(match)
-    breakpoint()
     return match.sum()

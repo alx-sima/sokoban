@@ -21,7 +21,7 @@
     spațiului stărilor: \textbf{Beam Search} și \textbf{Learning Real-Time A*}. 
     Prezentarea unei soluții de rezolvare și evaluarea performanțelor, comparând
     cele 2 strategii, cât și prezentarea raționamentului care a condus la 
-    această soluții și comparații cu idei anterioare.
+    această soluție și comparații cu idei anterioare.
 \end{abstract}
 
 \pagestyle{fancy}
@@ -148,17 +148,9 @@ tuturor stărilor din beam la fiecare pas (\textit{lungime\_beam} $\cdot$
 doar starea curentă și vecinii acesteia. Se poate observa în (\ref{fig:time}) că
 LRTA* este chiar și cu un ordin de mărime mai rapid decât Beam Search pentru 
 aproape toate testele. O excepție evidentă este testul "\textit{large\_map2}"
-(\ref{fig:large_map_2}), in care, cel mai probabil, LRTA* efectuează un număr 
+(\ref{fig:maps}), in care, cel mai probabil, LRTA* efectuează un număr 
 mult prea mare de backoffuri, deoarece sunt multe stări similare din punct de 
 vedere al costului.
-
-\begin{figure}[ht]
-    \begin{center}
-        \includegraphics[scale=0.4]{large_map2.png}
-    \end{center}
-    \caption{Testul "\textit{large\_map2}"}
-    \label{fig:large_map_2}
-\end{figure}
 
 \begin{figure}[ht]
     \includegraphics[scale=0.55]{solution/time.png}
@@ -169,16 +161,18 @@ vedere al costului.
 \subsubsection*{Numărul de stări vizitate}
 Numărul de stări evaluate urmează, din aceleași considerente, un tipar similar.
 Se remarcă în (\ref{fig:explored_states}) însă un număr similar de stări 
-evaluate în testul "\textit{hard\_map1}" (\ref{fig:hard_map1}), care are o 
-soluție foarte puțin evidentă, ceea ce conduce la multe backoffuri în cazul 
-LRTA*.
+evaluate în testele "\textit{large\_map2"} și "\textit{hard\_map1}" 
+(\ref{fig:maps}), primul având un spațiu foarte mare de căutare, iar al doilea 
+având o soluție foarte puțin evidentă, ceea ce conduce la multe backoffuri în 
+cazul LRTA*.
 
 \begin{figure}[ht]
     \begin{center}
+        \includegraphics[scale=0.4]{large_map2.png}
         \includegraphics[scale=0.4]{hard_map1.png}
     \end{center}
-    \caption{Testul "\textit{hard\_map1}"}
-    \label{fig:hard_map1}
+    \caption{Testele "\textit{large\_map2} și \textit{hard\_map1}"}
+    \label{fig:maps}
 \end{figure}
 
 \begin{figure}[ht]
@@ -261,7 +255,7 @@ impediment a putut fi reglat acordând o pondere mai mare distanței cutiilor.
     \end{center}
     \caption{Situație în care s-ar obține un cost mai mare dacă jucătorul ar 
     împinge cutia pe țintă}
-    \label{fig:lee}
+    \label{fig:scared}
 \end{figure}
 
 \subsubsection{Corespondența cutie - țintă de cost minim}
@@ -279,7 +273,7 @@ mutări astfel încât să țină cont dacă acestea sunt posibile (fără trage
 Varianta finală consideră că o mutare este posibilă dacă atât celula în care se
 împinge cutia, cât și cea în care s-ar afla jucătorul sunt libere. Au existat
 totuși mai multe variații ale acestei idei, în care am încercat să evit 
-deadlock-urile din testele complicate, în special prin restricționarea a ce 
+deadlock-urile din testele complicate, în special prin restricționarea a ceea ce 
 înseamnă "accesibil pentru jucător", însă fără succes. Se remarcă:
 \begin{itemize}
     \item O mutare să fie posibilă dacă există o cale fără un zid între jucător
@@ -304,8 +298,10 @@ situații. Timpul de execuție rămâne aproximativ același pentru LRTA*, dar c
 considerabil în cazul Beam Search.
 
 \begin{figure}[ht]
-    \includegraphics[scale=0.45]{comparison/solution_length.png}
-    \includegraphics[scale=0.45]{comparison/time.png}
+    \begin{center}
+        \includegraphics[scale=0.45]{comparison/solution_length.png}
+        \includegraphics[scale=0.45]{comparison/time.png}
+    \end{center}
 
     \caption{Comparație între rezultatele obținute dacă se ține cont sau nu de 
     distanța între jucător și cutii}
@@ -318,8 +314,8 @@ folosind Beam Search, dar nu și pentru LRTA*, deoarece acesta este un algoritm
 online, care poate face mutări care să compromită jocul și efectul acestora să
 se simtă mult mai târziu. Pentru a rezolva jocul fără mișcări de \textit{pull},
 algoritmul este ajustat să facă \textit{random backoff}: după un număr de mutări
-în care nu există nicio îmbunătățire a costului, există o șansă (
-crescătoare\footnote{De fapt, se contorizează șansa de a nu se face backoff --- 
+în care nu există nicio îmbunătățire a costului, există o șansă 
+(crescătoare\footnote{De fapt, se contorizează șansa de a nu se face backoff --- 
 inițial 1 --- care scade exponențial atenuat.}) de a se întoarce un număr de 
 pași înapoi. Cu fiecare întoarcere, acest număr de pași crește și el (liniar). 
 Acești parametri au fost aleși empiric, observând că o întoarcere cu un număr 
