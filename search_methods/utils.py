@@ -26,23 +26,15 @@ def get_neighbours(state: Map) -> list[Map]:
 
 
 def get_neighbours_no_pulls(state: Map) -> list[Map]:
-    neighbours = state.get_neighbours()
-    return list(filter(lambda x: x.undo_moves == state.undo_moves, neighbours))
-
-
-def save_play(moves: list[Map | str], name: str, path: str = "."):
-    tmpdir = mkdtemp()
-    save_images(moves, tmpdir)
-    create_gif(tmpdir, name, path)
-    rmtree(tmpdir)
+    return [n for n in state.get_neighbours() if n.undo_moves == 0]
 
 
 def in_bounds(state: Map, x: int, y: int) -> bool:
     return x >= 0 and y >= 0 and x < state.length and y < state.width
 
 
-def dist(a, b):
-    return abs(a.x - b[0]) + abs(a.y - b[1])
+def manhattan_distance(a: tuple[int, int], b: tuple[int, int]) -> int:
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 
 def compute_distance_matrix(
@@ -204,3 +196,10 @@ def compute_reachable_positions(state: Map) -> list[list[bool]]:
                 q.put((nx, ny))
 
     return reach
+
+
+def save_play(moves: list[Map | str], name: str, path: str = "."):
+    tmpdir = mkdtemp()
+    save_images(moves, tmpdir)
+    create_gif(tmpdir, name, path)
+    rmtree(tmpdir)

@@ -1,6 +1,5 @@
 from time import time
-from typing import Callable
-from random import choice
+from random import choice, random
 
 from search_methods.solver import Solver
 from search_methods.solution import Solution
@@ -17,27 +16,33 @@ class LRTAstar(Solver):
         - state_generator: A function that generates possible next states.
         - max_iters: Maximum number of iterations to run the algorithm
         (default: 100).
-        - max_restarts: Maximum number of restarts to perform  (default: 20).
-        - steps_before_restart: Number of steps until, if a state with a better
-        cost is not found, the algorithm will restart (default: 20). 'None'
-        disables restarting.
+        - backoff_steps: Initial number of steps taken back on a backoff
+        (default: 10).
+        - backoff_step_increment: How many more steps backoff each time
+        (default: 10).
+        - backoff_probability_factor: How much does the chance of not backing
+        off when no better state is found decreases e.g. 0.5 means the
+        chance halves (default: 1.0 - no backoff).
+        - cost_plateau_treshold: Number of steps without improvement before 
+        trying to backoff (default: 20).
         - cost_estimations: A dictionary to store the cost estimations for
         states.
-        - enhancement_retries: Number of times to retry the search for a
-        better solution after the first one is found (default: 0).
     """
 
     def __init__(
         self,
         base: Solver,
-        max_restarts: int = 20,
-        steps_before_restart: int | None = 20,
-        enhancement_retries: int = 0,
+        max_iters: int = 100,
+        backoff_steps: int = 10,
+        backoff_step_increment: int = 10,
+        backoff_probability_factor: float = 1.0,
+        cost_plateau_treshold: int = 20,
     ) -> None:
-        super().__init__(base.heuristic, base.state_generator, base.max_iters)
-        self.max_restarts = max_restarts
-        self.steps_before_restart = steps_before_restart
-        self.enhancement_retries = enhancement_retries
+        super().__init__(base.heuristic, base.state_generator, max_iters)
+        self.backoff_steps = backoff_steps
+        self.backoff_step_increment = backoff_step_increment
+        self.backoff_probability_factor = backoff_probability_factor
+        self.cost_plateau_treshold = cost_plateau_treshold
 
     def state_cost(self, state: Map):
         encoding = str(state)
@@ -47,42 +52,25 @@ class LRTAstar(Solver):
 
     def solve(self, initial_state: Map) -> Solution:
         """
-        Solve the puzzle. Clear all memory before solving.
+        Solve the puzzle.
         Args:
             initial_state: The initial state of the puzzle.
         """
         self.cost_estimations = {}
         self._start_time = time()
-        self._restarts = 0
-        self._previous_explored_states = 0
+        self._extra_states_explored = 0
+        self._backoffs = 0
 
-        solution = self._solve(initial_state)
-        if not solution.is_solved():
-            return solution  # Nothing to enhance
-
-        print(len(solution.steps))
-
-        for _ in range(self.enhancement_retries):
-            new_solution = self._solve(initial_state)
-            if (
-                len(new_solution.steps) < len(solution.steps)
-                and new_solution.is_solved()
-            ):
-                solution = new_solution
-                print(len(solution.steps))
-
-        return solution
-
-    def _solve(self, initial_state: Map) -> Solution:
         state = initial_state.copy()
         solution_steps = []
 
         min_cost_found = self.heuristic(state)
+        backoff = self.backoff_steps
+        chance_of_remaining = 1.0
         steps_no_improvement = 0
 
         for _ in range(self.max_iters):
-            state_encoding = str(state)
-            solution_steps.append(state_encoding)
+            solution_steps.append(state)
 
             # Solution found
             if state.is_solved():
@@ -94,56 +82,70 @@ class LRTAstar(Solver):
             costs = [1 + self.state_cost(n) for n in neighbours]
             min_cost = min(costs)
 
-            # TODO: refactor
-            next_states = list(
-                filter(lambda x: x[0] == min_cost, zip(costs, neighbours))
-            )
-            _, next_state = choice(next_states)
+            minimal_states = [
+                state for (cost, state) in zip(costs, neighbours) if cost == min_cost
+            ]
+
+            next_state = choice(minimal_states)
+            self.cost_estimations[str(next_state)] = min_cost
 
             if min_cost >= min_cost_found:
                 steps_no_improvement += 1
-                if (
-                    self.steps_before_restart is not None
-                    and steps_no_improvement >= self.steps_before_restart
-                ):
-                    return self._restart_search(solution_steps, state, initial_state)
+
+                if steps_no_improvement > self.cost_plateau_treshold:
+                    # Backoff
+                    if random() > chance_of_remaining:
+                        steps_back = min(backoff, len(solution_steps))
+                        self._extra_states_explored += steps_back
+                        solution_steps = solution_steps[:-steps_back]
+                        
+                        backoff += self.backoff_step_increment
+                        self._backoffs += 1
+
+                        if len(solution_steps) == 0:
+                            backoff = self.backoff_steps
+                            state = initial_state.copy()
+                        else:
+                            state = solution_steps.pop()
+
+                        min_cost_found = self.heuristic(state)
+                        chance_of_remaining = 1.0
+                        steps_no_improvement = 0
+                        continue
+
+                    else:
+                        chance_of_remaining *= self.backoff_probability_factor
             else:
                 min_cost_found = min_cost
+                chance_of_remaining = 1.0
                 steps_no_improvement = 0
 
-            self.cost_estimations[str(next_state)] = min_cost
             state = next_state
 
-        # No solution found in the given iterations, restart searching
-        return self._restart_search(solution_steps, state, initial_state)
-
-    def _restart_search(
-        self, solution_steps: list[str], current_state: Map, initial_state: Map
-    ) -> Solution:
-        self._restarts += 1
-        if self._restarts >= self.max_restarts:
-            return self._make_solution(
-                solution_steps, current_state.explored_states, current_state.undo_moves
-            )
-
-        self._previous_explored_states += current_state.explored_states
-        return self._solve(initial_state)
+        # No solution found in the given iterations
+        return self._make_solution(
+            solution_steps, state.explored_states, state.undo_moves
+        )
 
     def _make_solution(
-        self, steps: list[str], current_explored_states: int, pull_moves: int
+        self, steps: list[Map], current_explored_states: int, pull_moves: int
     ) -> Solution:
         duration = time() - self._start_time
-        explored_states = self._previous_explored_states + current_explored_states
+        explored_states = self._extra_states_explored + current_explored_states
 
         return self.LRTAstarSolution(
-            steps, explored_states, duration, pull_moves, self._restarts
+            [str(state) for state in steps],
+            explored_states,
+            duration,
+            pull_moves,
+            self._backoffs,
         )
 
     class LRTAstarSolution(Solution):
         """
         Stats about a solution found by LRTA*.
         Additional attributes:
-            - restarts: The number of restarts performed during the search.
+            - backoffs: The number of backoffs performed during the search.
         """
 
         def __init__(
@@ -152,10 +154,10 @@ class LRTAstar(Solver):
             explored_states: int,
             time: float,
             undo_moves: int,
-            restarts: int,
+            backoffs: int,
         ):
             super().__init__(steps, explored_states, time, undo_moves)
-            self.restarts = restarts
+            self.backoffs = backoffs
 
         def __str__(self) -> str:
-            return super().__str__() + f", restarts: {self.restarts}"
+            return super().__str__() + f", backoffs: {self.backoffs}"

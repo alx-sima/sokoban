@@ -19,8 +19,8 @@ class BeamSearch(Solver):
         - k: The number of states to keep in the beam (default: 20).
     """
 
-    def __init__(self, base: Solver, k: int = 20) -> None:
-        super().__init__(base.heuristic, base.state_generator, base.max_iters)
+    def __init__(self, base: Solver, max_iters: int = 100, k: int = 20) -> None:
+        super().__init__(base.heuristic, base.state_generator, max_iters)
         self.k = k
 
     def solve(self, initial_state: Map) -> Solution:
